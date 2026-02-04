@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Happy Birthday Jane 🎂</title>
+
+<style>
+html, body {
+margin: 0;
+padding: 0;
+height: 100%;
+overflow: hidden;
+background: black;
+font-family: monospace;
+}
+
+/* MATRIX BACKGROUND */
+canvas {
+position: fixed;
+inset: 0;
+z-index: 0;
+}
+
+/* CENTER OVERLAY */
+#overlay {
+position: fixed;
+inset: 0;
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 2;
+pointer-events: none;
+text-align: center;
+}
+
+#text {
+font-size: 110px;
+color: #ffd6e8;
+text-shadow: 0 0 25px rgba(255, 120, 200, 0.9);
+opacity: 0;
+transform: scale(0.9);
+transition: opacity 0.6s ease, transform 0.6s ease;
+line-height: 1.15;
+padding: 0 20px;
+}
+#text.show {
+opacity: 1;
+transform: scale(1);
+}
+
+/* Words (Happy/Birthday/to/you/Jane) a bit smaller than 3/2/1 */
+#text.words {
+font-size: 70px;
+}
+
+@media (max-width: 700px) {
+#text { font-size: 80px; }
+#text.words { font-size: 46px; }
+}
+
+/* START BUTTON (needed for audio) */
+#startWrap {
+position: fixed;
+inset: 0;
+z-index: 3;
+display: flex;
+align-items: center;
+justify-content: center;
+background: rgba(0,0,0,0.55);
+}
+#startBtn {
+font-family: monospace;
+font-size: 22px;
+padding: 14px 22px;
+border-radius: 12px;
+border: 1px solid rgba(255, 105, 180, 0.75);
+color: #ffd6e8;
+background: rgba(0,0,0,0.7);
+box-shadow: 0 0 18px rgba(255,105,180,0.35);
+cursor: pointer;
+}
+#startBtn:active { transform: scale(0.98); }
+</style>
+</head>
+
+<body>
+<canvas id="matrix"></canvas>
+
+<div id="overlay">
+<div id="text"></div>
+</div>
+
+<!-- Optional voiceover file (put voiceover.mp3 next to this html) -->
+<audio id="voice" src="voiceover.mp3" preload="auto"></audio>
+
+<div id="startWrap">
+<button id="startBtn">Start 🎂</button>
+</div>
+
+<script>
+/* ======================
+MATRIX "HAPPY BIRTHDAY"
+====================== */
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+initDrops();
+}
+window.addEventListener("resize", resize);
+
+const phrase = "HAPPY BIRTHDAY";
+const fontSize = 14; // smaller = more columns
+const frameSpeed = 22; // smaller = faster matrix
+let columns, drops;
+
+function initDrops() {
+columns = Math.floor(canvas.width / fontSize);
+drops = Array(columns).fill(0).map(() =>
+Math.floor(Math.random() * canvas.height / fontSize)
+);
+}
+
+function drawMatrix() {
+ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+ctx.font = `${fontSize}px monospace`;
+ctx.fillStyle = "rgba(255, 105, 180, 0.9)";
+
+for (let i = 0; i < columns; i++) {
+const ch = phrase[Math.floor(Math.random() * phrase.length)];
+const x = i * fontSize;
+const y = drops[i] * fontSize;
+ctx.fillText(ch, x, y);
+
+drops[i]++;
+if (y > canvas.height && Math.random() > 0.95) drops[i] = 0;
+}
+}
+
+resize();
+setInterval(drawMatrix, frameSpeed);
+
+/* ======================
+SEQUENCE + AUDIO
+====================== */
+const textEl = document.getElementById("text");
+const startWrap = document.getElementById("startWrap");
+const startBtn = document.getElementById("startBtn");
+
+const sequence = ["3","2","1","Happy","Birthday","to","you","Janey 🎂","祝你生日快乐，Janey🎉🎉"];
+let index = 0;
+
+const stepDelay = 1200; // time between words
+const fadeGap = 250; // fade out gap
+
+// === OPTION A: Use your voiceover file ===
+// Put a file named "voiceover.mp3" in the same folder as this HTML.
+// Then set USE_VOICE_FILE = true.
+const USE_VOICE_FILE = false;
+const voiceAudio = document.getElementById("voice");
+
+// === OPTION B (default): WebAudio melody (no mp3 needed) ===
+let audioCtx;
+
+function playTone(freq, ms, when = 0) {
+const t0 = audioCtx.currentTime + when;
+const osc = audioCtx.createOscillator();
+const gain = audioCtx.createGain();
+
+osc.type = "sine";
+osc.frequency.setValueAtTime(freq, t0);
+
+gain.gain.setValueAtTime(0.0001, t0);
+gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.02);
+gain.gain.exponentialRampToValueAtTime(0.0001, t0 + ms/1000);
+
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+
+osc.start(t0);
+osc.stop(t0 + ms/1000 + 0.03);
+return when + ms/1000;
+}
+
+// Simple Happy Birthday melody (frequencies in Hz).
+// Timing is in milliseconds per note.
+function playHappyBirthdayMelody() {
+// Notes: G G A G C B | G G A G D C | G G G E C B A | F F E C D C
+// We'll use a comfortable key.
+const G4=392, A4=440, B4=494, C5=523.25, D5=587.33, E5=659.25, F5=698.46;
+const notes = [
+[G4,300],[G4,300],[A4,600],[G4,600],[C5,600],[B4,900],
+[G4,300],[G4,300],[A4,600],[G4,600],[D5,600],[C5,900],
+[G4,300],[G4,300],[G4,600],[E5,600],[C5,600],[B4,600],[A4,900],
+[F5,300],[F5,300],[E5,600],[C5,600],[D5,600],[C5,1100]
+];
+
+let when = 0;
+for (const [f,ms] of notes) {
+when = playTone(f, ms, when);
+}
+}
+
+function startSong() {
+if (USE_VOICE_FILE) {
+// Your recording will play here (must exist locally)
+voiceAudio.currentTime = 0;
+voiceAudio.play().catch(() => {});
+} else {
+// WebAudio melody
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (audioCtx.state === "suspended") audioCtx.resume();
+playHappyBirthdayMelody();
+}
+}
+
+function showNext() {
+textEl.classList.remove("show");
+
+setTimeout(() => {
+textEl.classList.remove("words");
+
+textEl.textContent = sequence[index];
+
+// make the word part smaller than the countdown
+if (index >= 3) textEl.classList.add("words");
+
+textEl.classList.add("show");
+
+// Start song exactly when "Happy" appears
+if (sequence[index] === "Happy") startSong();
+
+index++;
+
+if (index < sequence.length) {
+setTimeout(showNext, stepDelay);
+}
+}, fadeGap);
+}
+
+// Must start from a user click for audio to work
+startBtn.addEventListener("click", () => {
+startWrap.style.display = "none";
+
+// prepare audio context on click (helps avoid autoplay blocks)
+if (!USE_VOICE_FILE) {
+audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+audioCtx.resume().catch(() => {});
+}
+
+index = 0;
+showNext();
+});
+</script>
+</body>
+</html>
